@@ -8,6 +8,7 @@ import time
 import matplotlib.pyplot as plt
 import os
 import rawpy
+import tqdm
 def read_dng(path):
     with rawpy.imread(path) as raw:
         rgb = raw.postprocess(use_camera_wb=False)
@@ -17,7 +18,7 @@ class TwoStageSegmentation(object):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f'using {self.device}')
 
-        sam = sam_model_registry['vit_b'](checkpoint='sam_vit_b.pth')
+        sam = sam_model_registry['vit_b'](checkpoint='../sam_vit_b.pth')
         # sam = sam_model_registry['vit_h'](checkpoint='sam_vit_h.pth')
         sam = sam.to(self.device)
         self.mask_generator = SamAutomaticMaskGenerator(sam)
@@ -63,7 +64,6 @@ class TwoStageSegmentation(object):
             masks = self.mask_generator.generate(cropped)
         else:
             pass
-        print(f'len of masks = {len(masks)}')
 
         # plt.figure()
         # plt.imshow(image)
@@ -95,9 +95,7 @@ class TwoStageSegmentation(object):
             # удалять аутлаер, который находить, например, по трём сигмам
             squares = sorted(squares, key=lambda x: np.sum(x))
             squares = squares[:-1]
-        print(len(squares))
 
-        # if len(squares) != 12: TODO
         return squares
     def get_result(self, title, with_crop=True):
         ext = title.split('.')[-1].lower()
@@ -121,7 +119,6 @@ class TwoStageSegmentation(object):
             height = int(image.shape[0] * scale_percent / 100)
             dim = (width, height)
             image = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
-            print(f'resized to {dim}, scaled = {scaled}')
 
 
         if with_crop:
@@ -138,7 +135,6 @@ class TwoStageSegmentation(object):
         # cv2.drawContours(cropped_with_mask, [squares[0]], -1, (0, 255, 0), 3) # нарисовать только первый квадрат
         # cv2.drawContours(cropped_with_mask, squares[0:12], -1, (0, 255, 0), 3)  # нарисовать все квадраты
         return image, squares, scaled, (x0,y0),cropped_with_mask
-model = TwoStageSegmentation()
 def depth_transform(depth,coordinates):
     if type(depth) is float:
         depth_list=np.ones(len(coordinates),dtype=np.float32)*depth
@@ -167,11 +163,9 @@ def depth_transform(depth,coordinates):
 
 def main(path,
          depth=0.5):
-    print(f'IMAGE #: {path}')
     start = time.time()
     result, coordinates, scale ,(x0,y0),cropped_with_mask= model.get_result(path)
     stop = time.time()
-    print(f'two stage segmentation took {stop - start} seconds\n')
 
     # postprocessing. ROBERT
     # coordinates are points for rectengle. Not polygons
@@ -197,40 +191,90 @@ def main(path,
         crop_list.append(result[y1:y2,x1:x2])
     return crop_list
 
-def
-data_folder = 'images'
-r = []
-g = []
-b = []
-for title in os.listdir(data_folder):
-    r.append([])
-    g.append([])
-    b.append([])
-    path = os.path.join(data_folder, title)
-    ext = title.split('.')[-1].lower()
-    if ext not in ['dng', 'png', 'jpg', 'jpeg']:
-      continue
-    depth = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-    s = time.time()
-    crops = main(path,depth)
-    print('global time:', time.time()-s)
-    response = {}
-    for c in crops:
-        plt.imshow(c[:,:,::-1])
-    averages = []
-    for i, crop in enumerate(crops):
-        r_average = np.mean(crop[:, :, 0])
-        g_average = np.mean(crop[:, :, 1])
-        b_average = np.mean(crop[:, :, 2])
-        response[i] = [r_average, g_average, b_average]
-        averages.append(response[i])
-        # print(response[i])
-    white = averages[-1]
-    for i, x in enumerate(averages):
-      averages[i][0] = averages[i][0] * 255 / white[0]
-      averages[i][1] = averages[i][1] * 255 / white[1]
-      averages[i][2] = averages[i][2] * 255 / white[2]
-      r[-1].append(averages[i][0])
-      g[-1].append(averages[i][1])
-      b[-1].append(averages[i][2])
-      print(response[i])
+def return_crops(data_folder = '../images'):
+        r = []
+        g = []
+        b = []
+        for title in os.listdir(data_folder):
+            r.append([])
+            g.append([])
+            b.append([])
+            path = os.path.join(data_folder, title)
+            ext = title.split('.')[-1].lower()
+            if ext not in ['dng', 'png', 'jpg', 'jpeg']:
+              continue
+            depth = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+            s = time.time()
+            crops = main(path,depth)
+            response = {}
+            for c in crops:
+                plt.imshow(c[:,:,::-1])
+            averages = []
+            for i, crop in enumerate(crops):
+                r_average = np.mean(crop[:, :, 0])
+                g_average = np.mean(crop[:, :, 1])
+                b_average = np.mean(crop[:, :, 2])
+                response[i] = [r_average, g_average, b_average]
+                averages.append(response[i])
+                # print(response[i])
+            white = averages[-1]
+            for i, x in enumerate(averages):
+              averages[i][0] = averages[i][0] * 255 / white[0]
+              averages[i][1] = averages[i][1] * 255 / white[1]
+              averages[i][2] = averages[i][2] * 255 / white[2]
+              r[-1].append(averages[i][0])
+              g[-1].append(averages[i][1])
+              b[-1].append(averages[i][2])
+              print(response[i])
+def make_marking(save_marking = '../marking',save_resize = '../resize_images'):
+    model = TwoStageSegmentation()
+    data_folders = ['../data/final_2/Источник 3/Полоска 3',
+                     '../data/final_2/Источник 3/Полоска 2',
+                     '../data/final_2/Источник 3/Полоска 1',
+                     '../data/final_2/Источник 1/Полоска 3',
+                     '../data/final_2/Источник 1/Полоска 2',
+                     '../data/final_2/Источник 1/Полоска 1',
+                     '../data/final_2/Источник 2/Полоска 3',
+                     '../data/final_2/Источник 2/Полоска 2',
+                     '../data/final_2/Источник 2/Полоска 1',
+                     '../data/тест',]
+    
+#     data_folders = ['../data/final_3/Источник 3/Полоска 3',
+#                      '../data/final_3/Источник 3/Полоска 2',
+#                      '../data/final_3/Источник 3/Полоска 1',
+#                      '../data/final_3/Источник 1/Полоска 3',
+#                      '../data/final_3/Источник 1/Полоска 2',
+#                      '../data/final_3/Источник 1/Полоска 1',
+#                      '../data/final_3/Источник 2/Полоска 3',
+#                      '../data/final_3/Источник 2/Полоска 2',
+#                      '../data/final_3/Источник 2/Полоска 1']
+    # IMPORTANT
+#     data_folders =data_folders_val
+    if not (os.path.exists(save_marking)):
+        os.mkdir(save_marking)
+    if not (os.path.exists(save_resize)):
+        os.mkdir(save_resize)
+    for data_folder in tqdm.tqdm(data_folders,'global'):
+        for title in tqdm.tqdm(os.listdir(data_folder),data_folder):
+            path = os.path.join(data_folder, title)
+            ext = title.split('.')[-1].lower()
+            if ext not in ['png', 'jpg', 'jpeg']:
+                continue
+            result, coordinates, scale ,(x0,y0),cropped_with_mask= model.get_result(path)
+            coordinates=sorted(coordinates, key=lambda x: np.mean(x,axis=(0))[0,0])
+    #         coordinates = depth_transform(0, coordinates)
+    #         for i in range(len(coordinates)):
+    #             coordinates[i] +=np.reshape(np.array([x0, y0]),(1,1,2))
+    #             print(i)
+            coordinates = [i + np.reshape(np.array([x0, y0]),(1,1,2)) for i in coordinates]
+    #         image = cv2.imread(path)
+            image = result # it is small image. in scale time
+            mask = np.zeros_like(image)
+            # for polygon in coordinates:
+            mask = cv2.drawContours(mask, coordinates, -1, (255, 255, 255), -1)
+            cv2.imwrite(os.path.join(save_marking,title).replace('dng','jpg'),mask)
+            if save_resize:
+                cv2.imwrite(os.path.join(save_resize,title).replace('dng','jpg'),image)
+
+if __name__ == '__main__':
+    make_marking(save_marking = '../marking',save_resize = '../resize_images')
