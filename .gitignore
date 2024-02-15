@@ -1,1 +1,10 @@
 /sam_vit_b.pth
+/images/
+/marking/
+venv/
+resize_images_val/
+resize_images/
+.idea/
+data/
+marking_val/
+nohup.out
