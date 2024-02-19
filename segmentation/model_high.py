@@ -8,6 +8,7 @@ import time
 import matplotlib.pyplot as plt
 import os
 import rawpy
+from glob import glob
 import tqdm
 def read_dng(path):
     with rawpy.imread(path) as raw:
@@ -228,16 +229,18 @@ def return_crops(data_folder = '../images'):
               print(response[i])
 def make_marking(save_marking = '../marking',save_resize = '../resize_images'):
     model = TwoStageSegmentation()
-    data_folders = ['../data/final_2/Источник 3/Полоска 3',
-                     '../data/final_2/Источник 3/Полоска 2',
-                     '../data/final_2/Источник 3/Полоска 1',
-                     '../data/final_2/Источник 1/Полоска 3',
-                     '../data/final_2/Источник 1/Полоска 2',
-                     '../data/final_2/Источник 1/Полоска 1',
-                     '../data/final_2/Источник 2/Полоска 3',
-                     '../data/final_2/Источник 2/Полоска 2',
-                     '../data/final_2/Источник 2/Полоска 1',
-                     '../data/тест',]
+    data_folders = [
+#                     '../data/final_2/Источник 3/Полоска 3',
+#                      '../data/final_2/Источник 3/Полоска 2',
+#                      '../data/final_2/Источник 3/Полоска 1',
+#                      '../data/final_2/Источник 1/Полоска 3',
+#                      '../data/final_2/Источник 1/Полоска 2',
+#                      '../data/final_2/Источник 1/Полоска 1',
+#                      '../data/final_2/Источник 2/Полоска 3',
+#                      '../data/final_2/Источник 2/Полоска 2',
+#                      '../data/final_2/Источник 2/Полоска 1',
+#                      '../data/тест',
+                     '../data/New/2',]
     
 #     data_folders = ['../data/final_3/Источник 3/Полоска 3',
 #                      '../data/final_3/Источник 3/Полоска 2',
@@ -277,4 +280,4 @@ def make_marking(save_marking = '../marking',save_resize = '../resize_images'):
                 cv2.imwrite(os.path.join(save_resize,title).replace('dng','jpg'),image)
 
 if __name__ == '__main__':
-    make_marking(save_marking = '../marking',save_resize = '../resize_images')
+    make_marking(save_marking = '../marking_val',save_resize = '../resize_images_val')
